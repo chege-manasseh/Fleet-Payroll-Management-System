@@ -1,0 +1,16 @@
+{
+    "name": "manasseh/fleet-payroll-management-system",
+    "description": "Fleet and payroll management system",
+    "autoload": {
+        "psr-4": {
+            "Manasseh\\FleetPayrollManagementSystem\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "chege-manasseh",
+            "email": "chegemanasseh2@gmail.com"
+        }
+    ],
+    "require": {}
+}
