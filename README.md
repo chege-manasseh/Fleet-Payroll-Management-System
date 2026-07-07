@@ -211,23 +211,24 @@ This project is designed to teach:
 
 src/
 
-├── Authentication
-│   ├── User.php
-│   ├── Admin.php
-│   └── Role.php
-│
-├── Employees
-│   ├── Employee.php
+├── Auth
+│   ├── Auth.php
+│  
+
+
+├── Users
+│   ├── Users.php
 │   ├── FullTimeEmployee.php
 │   ├── PartTimeEmployee.php
-│   └── ContractEmployee.php
-│
+│   ├── ContractEmployee.php
+│   ├── 
+
+
 ├── Vehicles
 │   ├── Vehicle.php
-│   ├── Truck.php
-│   ├── Car.php
-│   └── Bike.php
-│
+│   
+ 
+
 ├── Payments
 │   ├── PaymentInterface.php
 │   ├── MpesaPayment.php
