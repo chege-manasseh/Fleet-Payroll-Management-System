@@ -1,0 +1,75 @@
+<?php
+
+namespace App\Core;
+
+use App\Core\Response;
+
+class Router
+{
+    protected $routes = [
+        'GET' => [],
+        'POST' => [],
+        'PUT' => [],
+        'DELETE' => [],
+        'PATCH' => [],
+    ];
+
+
+    public function add($method, $route, $action)
+    {
+        $method = strtoupper($method);
+        $route = '/' . ltrim($route, '/');
+        $this->routes[$method][$route] = $action;
+    }
+
+
+    public function normalizeUri(string $uri): string
+    {
+        $path = parse_url($uri, PHP_URL_PATH) ?? '/';
+        $path = preg_replace('#^/public(?:/index\.php)?#', '', $path) ?? $path;
+        $path = preg_replace('#^/index\.php#', '', $path) ?? $path;
+        $path = '/' . ltrim($path, '/');
+
+        if ($path !== '/') {
+            $path = rtrim($path, '/');
+        }
+
+        return $path;
+    }
+
+
+    public function dispatch(string $method, string $uri, Request $request)
+    {
+        $method = strtoupper($method);
+        $routeMethod = $method === 'HEAD' ? 'GET' : $method;
+        $uri = $this->normalizeUri($uri);
+
+        if (!isset($this->routes[$routeMethod][$uri])) {
+            $message = 'Route not found';
+            $data = null;
+            $statusCode = 404;
+            return (new Response($message, $data, $statusCode))->send();
+        }
+
+        [$controller, $handler] = explode('@', $this->routes[$routeMethod][$uri]);
+        $controllerClass = "App\\Controllers\\{$controller}";
+
+        if (!class_exists($controllerClass)) {
+            $message = "Controller {$controller} not found";
+            $data = null;
+            $statusCode = 500;
+            return (new Response($message, $data, $statusCode))->send();
+        }
+
+        $instance = new $controllerClass();
+
+        if (!method_exists($instance, $handler)) {
+            $message = "Method {$handler} not found on {$controller}";
+            $data = null;
+            $statusCode = 500;
+            return (new Response($message, $data, $statusCode))->send();
+        }
+
+        return $instance->$handler($request);
+    }
+}
