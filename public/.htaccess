@@ -1,6 +1,9 @@
-# Front-controller rewrite: if no real file/dir exists, serve index.php.
-RewriteEngine On
+<IfModule mod_rewrite.c>
+    Options -Indexes
+    RewriteEngine On
 
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ index.php [L,QSA]
+    # Send all non-file, non-directory requests to the front controller.
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L,QSA]
+</IfModule>
