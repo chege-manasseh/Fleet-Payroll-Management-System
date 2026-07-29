@@ -39,7 +39,9 @@ class Request
      */
     public function input(string $key, $default = null)
     {
-        return $this->data[$key] ?? $default;
+        $value = $this->data[$key] ?? $default;
+
+        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
     }
 
     /**
