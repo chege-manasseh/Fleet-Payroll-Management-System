@@ -1,17 +1,18 @@
 <?php
+
 namespace App\Storage;
 
 use PDO;
 
 class Database
 {
-    protected $db;
-    protected $host;
-    protected $database;
-    protected $username;
-    protected $password;
-    protected $dsn;
-    protected $pdo;
+    private $db;
+    private $host;
+    private $database;
+    private $username;
+    private $password;
+    private $dsn;
+    private $pdo;
     public function __construct()
     {
         $this->db = $_ENV['DB_CONNECTION'];
@@ -22,7 +23,8 @@ class Database
         $this->dsn = $this->db . ':host=' . $this->host . ';dbname=' . $this->database;
         $this->pdo = new PDO($this->dsn, $this->username, $this->password);
     }
-  
+
+
     public function getPDO()
     {
         return $this->pdo;
