@@ -14,6 +14,22 @@ class Users extends Models
     {
         parent::__construct();
     }
+
+    public function registerUser($username, $phone, $password){
+        $password = password_hash($password,PASSWORD_BCRYPT);
+        $query = "INSERT INTO users (username, phone, password) VALUES (?, ?, ?)";
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([$username, $phone, $password]);
+        $userId = $this->pdo->lastInsertId();
+        $query = "SELECT * FROM users WHERE id = ?";
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([$userId]);
+        $user = $stmt->fetch();
+        if($user){
+            return $user;
+        }
+    }
+
     public function verifyUser($identifier, $password){
         $query = "SELECT * FROM users WHERE username = :identifier OR email = :identifier OR phone = :identifier AND password = :password";
         $stmt = $this->pdo->prepare($query);
@@ -33,19 +49,4 @@ class Users extends Models
         }
     }
 
-    public function saveRefreshToken($userId, $refreshToken, $expiresAt)
-    {
-        $query = "INSERT INTO user_refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)";
-        $stmt = $this->pdo->prepare($query);
-        $stmt->execute([$userId, $refreshToken, $expiresAt]);
-        return $stmt->rowCount();
-    }
-
-    public function getRefreshToken($userId)
-    {
-        $query = "SELECT * FROM user_refresh_tokens WHERE user_id = ?";
-        $stmt = $this->pdo->prepare($query);
-        $stmt->execute([$userId]);
-        return $stmt->fetch();
-    }
 }
