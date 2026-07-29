@@ -1,94 +1,48 @@
 <?php
-
 namespace App\Controllers\Auth;
 
 use App\Controllers\Controller;
-use App\Core\Response;
-use App\Models\Users;
 use App\Core\Request;
-use Firebase\JWT\JWT;
-
+use App\Core\Response;
+use App\Services\Auth\AuthService;
+use App\Core\Database;
 
 class AuthController extends Controller
 {
-    private Users $users;
-    public  $message;
-    public  $data;
-    public function __construct()
+    private AuthService $authService;
+    private Database $db;
+    public function __construct(AuthService $authService, Database $db)
     {
-        $this->users = new Users();
+        $this->authService = $authService;
+        $this->db = $db;
     }
 
-    public function register(Request $request)
-    {
-        $response = new Response('Register endpoint', null, 200);
-        return $response->send();
+    public function register(Request $request){
+        return $this->authService->register($request,$this->db);  
     }
-
-
-    public function login(Request $request)
-    {
-        if (!$request->input('username') || !$request->input('password')) {
-            $message = $this->message = 'Please fill in all fields';
-            $data = $this->data = null;
-            return $this->json($message, $data, 400);
-        }
-        //build a validater for email and username and phone number
-
-        $identifier = $request->input('username');
-        $password = $request->input('password');
-
-        $user = $this->users->verifyUser($identifier, $password);
-        //return user object as json with username,email and id
-
-        if ($user) {
-            $accessPayload = [
-                'iss' => 'fleet-payroll-management-system',
-                'iat' => time(),
-                'exp' => time() + $_ENV['JWT_EXPIRATION'],
-                'userId' => $user['id'],
-                'role' => $user['role'],
-            ];
-            $message = $this->message = 'Login successful';
-            $data = $this->data = [
-                'username' => $user['username'],
-                'email' => $user['email'],
-                'id' => $user['id'],
-                'token' => JWT::encode($accessPayload, $_ENV['JWT_SECRET'], $_ENV['JWT_ALGORITHM']),
-            ];
-            $refreshToken = bin2hex(random_bytes(40));
-            $expiresAt = date('Y-m-d H:i:s', time() + (30 * 24 * 60 * 60)); // 30 days
-
-            // 3. Save the hash of the refresh token in your database
-            $tokenHash = hash($_ENV['JWT_ALGORITHM'], $refreshToken);
-            $this->users->saveRefreshToken($user['id'], $tokenHash, $expiresAt);
-
-            //refresh token cookie
-            setcookie('refresh_token', $refreshToken, [
-                'expires' => time() + (30 * 24 * 60 * 60),
-                'path' => '/api/auth/refresh',
-                'secure' => true,         
-                'httponly' => true,       
-                'samesite' => 'Strict'    
-            ]);
-            return $this->json($message, $data);
-        }
+    public function login(Request $request){
+        return $this->authService->login($request,$this->db);
     }
-    public function verifyEmail()
-    {
-        $response = new Response('Verify email endpoint', null, 200);
-        return $response->send();
+    public function verifyEmail(Request $request){}
+    public function logout(Request $request){
+        return $this->authService->logout($request);
     }
-
-    public function logout()
-    {
-        $response = new Response('Logout endpoint', null, 200);
-        return $response->send();
+    public function changePassword(Request $request){
+        return $this->authService->changePassword($request);
     }
-
-    public function changePassword()
-    {
-        $response = new Response('Change password endpoint', null, 200);
-        return $response->send();
+    public function forgotPassword(Request $request){
+        return $this->authService->forgotPassword($request);
+    }
+    public function resetPassword(Request $request){
+        return $this->authService->resetPassword($request);
+    }
+    public function verifyResetPassword(Request $request){
+        return $this->authService->verifyResetPassword($request);
+    }
+    public function verifyChangePassword(Request $request){
+        return $this->authService->verifyChangePassword($request);
+    }
+    public function verifyForgotPassword(Request $request){
+        return $this->authService->verifyForgotPassword($request);
     }
 }
