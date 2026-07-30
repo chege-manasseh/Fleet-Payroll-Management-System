@@ -3,6 +3,7 @@
 namespace App\Core;
 
 use App\Core\Response;
+use App\Core\Container;
 
 class Router
 {
@@ -38,7 +39,7 @@ class Router
     }
 
 
-    public function dispatch(Request $request,string $method, string $uri)
+    public function dispatch(Request $request,string $method, string $uri,Container $container)
     {
         $method = strtoupper($method);
         $routeMethod = $method === 'HEAD' ? 'GET' : $method;
@@ -51,17 +52,16 @@ class Router
             return (new Response($message, $data, $statusCode))->send();
         }
 
-        [$controller, $handler] = explode('@', $this->routes[$routeMethod][$uri]);
-        $controllerClass = "App\\Controllers\\{$controller}";
+        [$controller, $handler] = $this->routes[$routeMethod][$uri];
 
-        if (!class_exists($controllerClass)) {
+        if (!class_exists($controller)) {
             $message = "Controller {$controller} not found";
             $data = null;
             $statusCode = 500;
             return (new Response($message, $data, $statusCode))->send();
         }
 
-        $instance = new $controllerClass();
+        $instance = $container->make($controller);
 
         if (!method_exists($instance, $handler)) {
             $message = "Method {$handler} not found on {$controller}";

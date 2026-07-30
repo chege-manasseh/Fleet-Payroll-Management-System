@@ -6,6 +6,9 @@ use App\Core\Request;
 use App\Controllers\Middleware\JwtMiddleware;
 use App\Core\Container;
 use App\Storage\Database;
+use App\Controllers\HomeController;
+use App\Controllers\Auth\AuthController;
+use App\Controllers\Auth\RefreshToken;
 
 $container = Container::getInstance();
 
@@ -16,44 +19,48 @@ $container->singleton(Request::class,function(){
 $container->singleton(Database::class,function(){
     return new Database();
 });
+
+
+$container->singleton(Router::class,function(){
+    return new Router();
+});
+
+$container->singleton(JwtMiddleware::class,function() use($container){
+    return $container->build(JwtMiddleware::class);
+});
+
 $container->singleton(Response::class,function(){
     return new Response();
 });
 
-$container->singleton(JwtMiddleware::class,function(){
-    return new JwtMiddleware();
-});
+$router = $container->make(Router::class);
+$request = $container->make(Request::class);
+$response = $container->make(Response::class);
+$jwtMiddleware = $container->make(JwtMiddleware::class);
 
-$db =$container->get(Database::class);
-$request= $container->get(Request::class);
-$router= $container->get(Router::class);
-$jwtMiddleware = $container->get(JwtMiddleware::class);
-$response = $container->get(Response::class);
-
-
-$router->add('GET', '/', 'HomeController@index');
-$router->add('POST', '/login', 'Auth\AuthController@login');
-$router->add('GET','/testconnection','HomeController@testConnection');
-$router->add('POST','/change-password','Auth\AuthController@changePassword');
-$router->add('POST','/refresh','Auth\RefreshToken@refreshToken');
-$router->add('POST','/register','Auth\AuthController@register');
+$router->add('GET', '/', [HomeController::class, 'index']);
+$router->add('POST', '/login', [AuthController::class, 'login']);
+$router->add('GET','/testconnection',[HomeController::class, 'testConnection']);
+$router->add('POST','/change-password',[AuthController::class, 'changePassword']);
+$router->add('POST','/refresh',[RefreshToken::class, 'refreshToken']);
+$router->add('POST','/register',[AuthController::class, 'register']);
 
 $publicRoutes = [
     'GET' => [
-        '/' => 'HomeController@index',
-        '/login' => 'Auth\AuthController@login',
-        '/testconnection' => 'HomeController@testConnection',
+        '/' => [HomeController::class, 'index'],
+        '/login' => [AuthController::class, 'login'],
+        '/testconnection' => [HomeController::class, 'testConnection'],
     ],
     'POST' => [
-        '/login' => 'Auth\AuthController@login',
-        '/register' => 'Auth\AuthController@register',
+        '/login' => [AuthController::class, 'login'],
+        '/register' => [AuthController::class, 'register'],
     ],
 ];
 
 if(isset($publicRoutes[$request->getMethod()]) && isset($publicRoutes[$request->getMethod()][$router->normalizeUri($request->getUri())])){
-    return [$router,$request,$response];
+    return [$router,$request,$response,$container];
 }
 
-if($jwtMiddleware->handle($request, $response)=== true){
-    return [$router,$request,$response];
+if($jwtMiddleware->handle()=== true){
+    return [$router,$request,$response,$container];
 }
