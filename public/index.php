@@ -8,4 +8,4 @@ $dotenv->safeLoad();
 
 [$router, $request] = require __DIR__ . '/../src/Routes/web.php';
 
-$router->dispatch($request->getMethod(), $request->getUri(), $request);
+$router->dispatch($request,$request->getMethod(), $request->getUri());

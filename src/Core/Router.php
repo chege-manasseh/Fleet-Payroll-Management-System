@@ -38,7 +38,7 @@ class Router
     }
 
 
-    public function dispatch(string $method, string $uri, Request $request)
+    public function dispatch(Request $request,string $method, string $uri)
     {
         $method = strtoupper($method);
         $routeMethod = $method === 'HEAD' ? 'GET' : $method;
