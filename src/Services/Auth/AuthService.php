@@ -16,42 +16,49 @@ class AuthService
     public  $message;
     public  $data;
     private Database $db;
+    private Response $response;
 
-    public function __construct(Database $db,Users $users,UserTokens $userTokens)
-    {   
+    public function __construct(Database $db, Users $users, UserTokens $userTokens, Response $response)
+    {
         $this->users = new Users();
         $this->userTokens = new UserTokens();
         $this->db = $db;
+        $this->response = $response;
     }
 
-    public function register(string $username, string $phone, string $password)
+    public function register(Request $request)
     {
         try {
+            $this->db->beginTransaction();
+            $username = $request->input('username');
+            $phone = $request->input('phone');
+            $password = $request->input('password');
+            echo $username . ' ' . $phone . ' ' . $password;
             //build a validater for username, phone and password
 
             if (!$username || !$phone || !$password) {
-                return 'Please fill in all fields';
+                return $this->response->json('Please fill in all fields {$username, $phone, $password}', null, 400);
             }
             if (strlen($username) < 3 || strlen($username) > 20) {
-                return $this->json('Username must be between 3 and 20 characters', null, 400);
+                return $this->response->json('Username must be between 3 and 20 characters', null, 400);
             }
             if (strlen($phone) != 10) {
-                return $this->json('Phone number must be 10 digits', null, 400);
+                return $this->response->json('Phone number must be 10 digits', null, 400);
             }
             if (strlen($password) < 8) {
-                return $this->json('Password must be at least 8 characters', null, 400);
+                return $this->response->json('Password must be at least 8 characters', null, 400);
             }
             if (!preg_match('/[A-Z]/', $password)) {
-                return $this->json('Password must contain at least one uppercase letter', null, 400);
+                return $this->response->json('Password must contain at least one uppercase letter', null, 400);
             }
             if (!preg_match('/[a-z]/', $password)) {
-                return $this->json('Password must contain at least one lowercase letter', null, 400);
+                return $this->response->json('Password must contain at least one lowercase letter', null, 400);
             }
             if (!preg_match('/[0-9]/', $password)) {
-                return $this->json('Password must contain at least one number', null, 400);
+                return $this->response->json('Password must contain at least one number', null, 400);
             }
             if (!preg_match('/[!@#$%^&*_]/', $password)) {
-                return $this->json('Password must contain at least one special character', null, 400);
+                return $this->response->json('Password must contain at least one special character', null, 400);
             }
 
             $user = $this->users->registerUser($username, $phone, $password);
@@ -81,10 +88,12 @@ class AuthService
                     'httponly' => true,
                     'samesite' => 'Strict'
                 ]);
-                return $this->json($message, $data);
+                $this->db->commit();
+                return $this->response->json($message, $data);
             }
         } catch (\Exception $e) {
-            return $this->json('User registration failed', null, 401);
+            $this->db->rollBack();
+            return $this->response->json('User registration failed', null, 401);
         }
     }
 
@@ -94,7 +103,7 @@ class AuthService
         if (!$request->input('username') || !$request->input('password')) {
             $message = $this->message = 'Please fill in all fields';
             $data = $this->data = null;
-            return $this->json($message, $data, 400);
+            return $this->response->json($message, $data, 400);
         }
         //build a validater for email and username and phone number
 
@@ -134,24 +143,21 @@ class AuthService
                 'httponly' => true,
                 'samesite' => 'Strict'
             ]);
-            return $this->json($message, $data);
+            return $this->response->json($message, $data);
         }
     }
-    public function verifyEmail()
+    public function verifyEmail(Request $request)
     {
-        $response = new Response('Verify email endpoint', null, 200);
-        return $response->send();
+        return $this->response->json('Verify email endpoint', null, 200);
     }
 
-    public function logout()
+    public function logout(Request $request)
     {
-        $response = new Response('Logout endpoint', null, 200);
-        return $response->send();
+        return $this->response->json('Logout endpoint', null, 200);
     }
 
-    public function changePassword()
+    public function changePassword(Request $request)
     {
-        $response = new Response('Change password endpoint', null, 200);
-        return $response->send();
+        return $this->response->json('Change password endpoint', null, 200);
     }
 }
