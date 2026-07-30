@@ -39,7 +39,7 @@ class Router
     }
 
 
-    public function dispatch(Request $request,string $method, string $uri,Container $container)
+    public function dispatch(Request $request,string $method, string $uri,Response $response,Container $container)
     {
         $method = strtoupper($method);
         $routeMethod = $method === 'HEAD' ? 'GET' : $method;
@@ -49,7 +49,7 @@ class Router
             $message = 'Route not found';
             $data = null;
             $statusCode = 404;
-            return (new Response($message, $data, $statusCode))->send();
+            return $response->json($message, $data, $statusCode);
         }
 
         [$controller, $handler] = $this->routes[$routeMethod][$uri];
@@ -58,7 +58,7 @@ class Router
             $message = "Controller {$controller} not found";
             $data = null;
             $statusCode = 500;
-            return (new Response($message, $data, $statusCode))->send();
+            return $response->json($message, $data, $statusCode);
         }
 
         $instance = $container->make($controller);
@@ -67,7 +67,7 @@ class Router
             $message = "Method {$handler} not found on {$controller}";
             $data = null;
             $statusCode = 500;
-            return (new Response($message, $data, $statusCode))->send();
+            return $response->json($message, $data, $statusCode);
         }
 
         return $instance->$handler($request);

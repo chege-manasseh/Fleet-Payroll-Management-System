@@ -45,6 +45,7 @@ class Request
      */
     public function input(string $key, $default = null)
     {
+        $this->getData();
         $value = $this->data[$key] ?? $default;
 
         return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -55,6 +56,7 @@ class Request
      */
     public function all(): array
     {
+        $this->getData();
         return $this->data;
     }
     public function getHeader(string $key)
