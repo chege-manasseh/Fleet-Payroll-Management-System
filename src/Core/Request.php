@@ -12,16 +12,7 @@ class Request
     {
         $this->method = $_SERVER['REQUEST_METHOD'];
         $this->uri = $_SERVER['REQUEST_URI'];
-        // Automatically fetch data depending on the request method
-        if ($this->method === 'POST' || $this->method === 'PUT' || $this->method === 'PATCH') {
-            // Check if the frontend sent JSON content
-            $json = json_decode(file_get_contents('php://input'), true);
-
-            // Fallback to standard application form parameters if JSON is empty
-            $this->data = is_array($json) ? $json : $_POST;
-        } else {
-            $this->data = $_GET;
-        }
+   
     }
 
     public function getMethod()
@@ -32,6 +23,21 @@ class Request
     public function getUri()
     {
         return $this->uri;
+    }
+
+    public function getData(): array
+    {
+          // Automatically fetch data depending on the request method
+          if ($this->method === 'POST' || $this->method === 'PUT' || $this->method === 'PATCH') {
+            // Check if the frontend sent JSON content
+            $json = json_decode(file_get_contents('php://input'), true);
+
+            // Fallback to standard application form parameters if JSON is empty
+            $this->data = is_array($json) ? $json : $_POST;
+        } else {
+            $this->data = $_GET;
+        }
+        return $this->data;
     }
 
     /**
