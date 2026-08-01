@@ -71,4 +71,9 @@ class Request
     {
         return $this->data[$key] ?? null;
     }
+
+    public function getCookie(string $key)
+    {
+        return $_COOKIE[$key] ?? null;
+    }
 }

@@ -27,6 +27,13 @@ class UserTokens extends Models
         return $stmt->fetch();
     }
 
+    public function updateRefreshToken($userId, $expiresAt)
+    {
+        $query = "UPDATE user_verify_tokens SET expires_at = ? WHERE user_id = ?";
+        $stmt = $this->pdo->prepare($query);
+        $stmt->execute([$expiresAt, $userId]);
+        return $stmt->rowCount();
+    }
     public function deleteRefreshToken($userId)
     {
         $query = "DELETE FROM user_verify_tokens WHERE user_id = ?";

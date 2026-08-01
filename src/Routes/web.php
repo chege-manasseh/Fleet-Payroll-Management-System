@@ -44,6 +44,8 @@ $router->add('GET','/testconnection',[HomeController::class, 'testConnection']);
 $router->add('POST','/change-password',[AuthController::class, 'changePassword']);
 $router->add('POST','/refresh',[RefreshToken::class, 'refreshToken']);
 $router->add('POST','/register',[AuthController::class, 'register']);
+$router->add('POST','/logout',[AuthController::class, 'logout']);
+
 
 $publicRoutes = [
     'GET' => [
@@ -54,6 +56,8 @@ $publicRoutes = [
     'POST' => [
         '/login' => [AuthController::class, 'login'],
         '/register' => [AuthController::class, 'register'],
+        '/logout' => [AuthController::class, 'logout'],
+        '/refresh' => [RefreshToken::class, 'refreshToken'],
     ],
 ];
 

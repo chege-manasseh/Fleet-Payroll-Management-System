@@ -26,6 +26,41 @@ class AuthService
         $this->response = $response;
     }
 
+    public function generateToken($userId, $role)
+    {
+        $accessPayload = [
+            'iss' => 'fleet-payroll-management-system',
+            'iat' => time(),
+            'exp' => time() + $_ENV['JWT_EXPIRATION'],
+            'userId' => $userId,
+            'role' => $role,
+        ];
+        $accessToken = JWT::encode($accessPayload, $_ENV['JWT_SECRET'], $_ENV['JWT_ALGORITHM']);
+        setcookie('access_token', $accessToken, [
+            'expires' => time() + $_ENV['JWT_EXPIRATION'],
+            'path' => '/',
+            'secure' => false,
+            'httponly' => true,
+            'samesite' => 'Strict'
+        ]);
+        $refreshToken = bin2hex(random_bytes(40));
+        $expiresAt = date('Y-m-d H:i:s', time() + (30 * 24 * 60 * 60)); // 30 
+        setcookie('refresh_token', $refreshToken, [
+            'expires' => time() + (30 * 24 * 60 * 60),
+            'path' => '/',
+            'secure' => false,
+            'httponly' => true,
+            'samesite' => 'Strict'
+        ]);
+        $tokenHash = hash('sha256', $refreshToken);
+
+        return [
+            'accessToken' => $accessToken,
+            'refreshToken' => $tokenHash,
+            'expiresAt' => $expiresAt,
+        ];
+    }
+
     public function register(Request $request)
     {
         try {
@@ -33,7 +68,6 @@ class AuthService
             $username = $request->input('username');
             $phone = $request->input('phone');
             $password = $request->input('password');
-            echo $username . ' ' . $phone . ' ' . $password;
             //build a validater for username, phone and password
 
             if (!$username || !$phone || !$password) {
@@ -63,31 +97,17 @@ class AuthService
 
             $user = $this->users->registerUser($username, $phone, $password);
             if ($user) {
-                $accessPayload = [
-                    'iss' => 'fleet-payroll-management-system',
-                    'iat' => time(),
-                    'exp' => time() + $_ENV['JWT_EXPIRATION'],
-                    'userId' => $user['id'],
-                    'role' => $user['role'],
-                ];
+                $token = $this->generateToken($user['id'], 'user');
                 $message = $this->message = 'User registered successfully';
                 $data = $this->data = [
                     'username' => $user['username'],
                     'email' => $user['email'] ?? null,
                     'id' => $user['id'],
-                    'token' => JWT::encode($accessPayload, $_ENV['JWT_SECRET'], $_ENV['JWT_ALGORITHM']),
+                    'token' => $token['accessToken'],
                 ];
-                $refreshToken = bin2hex(random_bytes(40));
-                $expiresAt = date('Y-m-d H:i:s', time() + (30 * 24 * 60 * 60)); // 30 days
-                $tokenHash = hash('sha256', $refreshToken);
-                $this->userTokens->saveRefreshToken($user['id'], $tokenHash, $expiresAt);
-                setcookie('refresh_token', $refreshToken, [
-                    'expires' => time() + (30 * 24 * 60 * 60),
-                    'path' => '/api/auth/refresh',
-                    'secure' => true,
-                    'httponly' => true,
-                    'samesite' => 'Strict'
-                ]);
+
+                $this->userTokens->saveRefreshToken($user['id'], $token['refreshToken'], $token['expiresAt']);
+
                 $this->db->commit();
                 return $this->response->json($message, $data);
             }
@@ -111,38 +131,17 @@ class AuthService
         $password = $request->input('password');
 
         $user = $this->users->verifyUser($identifier, $password);
-        //return user object as json with username,email and id
 
         if ($user) {
-            $accessPayload = [
-                'iss' => 'fleet-payroll-management-system',
-                'iat' => time(),
-                'exp' => time() + $_ENV['JWT_EXPIRATION'],
-                'userId' => $user['id'],
-                'role' => $user['role'],
-            ];
+            $token = $this->generateToken($user['id'], 'user');
             $message = $this->message = 'Login successful';
             $data = $this->data = [
                 'username' => $user['username'],
                 'email' => $user['email'] ?? null,
                 'id' => $user['id'],
-                'token' => JWT::encode($accessPayload, $_ENV['JWT_SECRET'], $_ENV['JWT_ALGORITHM']),
+                'token' => $token['accessToken'],
             ];
-            $refreshToken = bin2hex(random_bytes(40));
-            $expiresAt = date('Y-m-d H:i:s', time() + (30 * 24 * 60 * 60)); // 30 days
-
-            // 3. Save the hash of the refresh token in your database
-            $tokenHash = hash('sha256', $refreshToken);
-            $this->userTokens->saveRefreshToken($user['id'], $tokenHash, $expiresAt);
-
-            //refresh token cookie
-            setcookie('refresh_token', $refreshToken, [
-                'expires' => time() + (30 * 24 * 60 * 60),
-                'path' => '/api/auth/refresh',
-                'secure' => true,
-                'httponly' => true,
-                'samesite' => 'Strict'
-            ]);
+            $this->userTokens->saveRefreshToken($user['id'], $token['refreshToken'], $token['expiresAt']);
             return $this->response->json($message, $data);
         }
     }
@@ -153,7 +152,17 @@ class AuthService
 
     public function logout(Request $request)
     {
-        return $this->response->json('Logout endpoint', null, 200);
+        $refreshToken = $request->getCookie('refresh_token');
+        echo $refreshToken;
+        if ($refreshToken) {
+            $expiresAt = date(now());
+            $userId = $request->input('userId');
+            $this->userTokens->updateRefreshToken($userId, $expiresAt);
+            setcookie('refresh_token', '', time() - 3600, '/');
+            setcookie('access_token', '', time() - 3600, '/');
+            return $this->response->json('Logout successful', null, 200);
+        }
+        return $this->response->json('Logout failed.', null, 400);
     }
 
     public function changePassword(Request $request)
