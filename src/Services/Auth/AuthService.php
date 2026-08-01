@@ -38,7 +38,7 @@ class AuthService
         $accessToken = JWT::encode($accessPayload, $_ENV['JWT_SECRET'], $_ENV['JWT_ALGORITHM']);
         setcookie('access_token', $accessToken, [
             'expires' => time() + $_ENV['JWT_EXPIRATION'],
-            'path' => '/',
+            'path' => '/api',
             'secure' => false,
             'httponly' => true,
             'samesite' => 'Strict'
@@ -47,7 +47,7 @@ class AuthService
         $expiresAt = date('Y-m-d H:i:s', time() + (30 * 24 * 60 * 60)); // 30 
         setcookie('refresh_token', $refreshToken, [
             'expires' => time() + (30 * 24 * 60 * 60),
-            'path' => '/',
+            'path' => '/api/refresh',
             'secure' => false,
             'httponly' => true,
             'samesite' => 'Strict'
