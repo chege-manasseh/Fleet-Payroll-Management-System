@@ -95,7 +95,8 @@ class AuthService
                 return $this->response->json('Password must contain at least one special character', null, 400);
             }
 
-            $user = $this->users->registerUser($username, $phone, $password);
+            $passwordHash=password_hash($password,PASSWORD_ARGON2ID);
+            $user = $this->users->registerUser($username, $phone, $passwordHash);
             if ($user) {
                 $token = $this->generateToken($user['id'], 'user');
                 $message = $this->message = 'User registered successfully';

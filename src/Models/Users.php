@@ -17,7 +17,6 @@ class Users extends Models
 
     public function registerUser($username, $phone, $password)
     {
-        $password = password_hash($password, PASSWORD_BCRYPT);
         $query = "INSERT INTO users (username, phone, password) VALUES (?, ?, ?)";
         $stmt = $this->pdo->prepare($query);
         $stmt->execute([$username, $phone, $password]);
