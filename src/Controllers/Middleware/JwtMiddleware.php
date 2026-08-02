@@ -6,6 +6,7 @@ use App\Core\Request;
 use App\Core\Response;
 use Exception;
 use App\Controllers\Controller;
+use App\Storage\Database;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
@@ -13,24 +14,34 @@ class JwtMiddleware extends Controller
 {
     public $message;
     public $data;
+    public $request;
+    public $response;
+    public $db;
+
+    public function __construct(Request $request,Response $response,Database $db)
+    {
+        $this->request = $request;
+        $this->response = $response;
+        $this->db=$db;
+    }
     
-    public function handle(Request $request, Response $response)
+    public function handle()
     {
         try{
-            $token = $request->getHeader('Authorization');
+            $token = $this->request->getHeader('Authorization');
             if(!$token){
-                $message = $this->message = 'Unauthorized';
-                $data = $this->data = ['error' => 'Unauthorized'];
-                return $this->json($message, $data, 401);
+                $message = 'Unauthorized';
+                $data = ['error' => 'Unauthorized'];
+                return $this->response->json($message, $data, 401);
             }
             $token = str_replace('Bearer ', '', $token);
             $decoded = JWT::decode($token, new Key($_ENV['JWT_SECRET'], $_ENV['JWT_ALGORITHM']));
-            $request->setAttribute('user', $decoded);
+            $this->request->setAttribute('user', $decoded);
             return true;
         }catch(Exception $e){
-            $message = $this->message = 'Unauthorized';
-            $data = $this->data = ['error' => $e->getMessage()];
-            return $this->json($message, $data, 401);
+            $message = 'Unauthorized';
+            $data = ['error' => $e->getMessage()];
+            return $this->response->json($message, $data, 401);
         }
     }   
 }

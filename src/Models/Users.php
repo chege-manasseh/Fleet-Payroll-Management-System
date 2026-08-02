@@ -15,8 +15,8 @@ class Users extends Models
         parent::__construct();
     }
 
-    public function registerUser($username, $phone, $password){
-        $password = password_hash($password,PASSWORD_BCRYPT);
+    public function registerUser($username, $phone, $password)
+    {
         $query = "INSERT INTO users (username, phone, password) VALUES (?, ?, ?)";
         $stmt = $this->pdo->prepare($query);
         $stmt->execute([$username, $phone, $password]);
@@ -25,12 +25,13 @@ class Users extends Models
         $stmt = $this->pdo->prepare($query);
         $stmt->execute([$userId]);
         $user = $stmt->fetch();
-        if($user){
+        if ($user) {
             return $user;
         }
     }
 
-    public function verifyUser($identifier, $password){
+    public function verifyUser($identifier, $password)
+    {
         $query = "SELECT * FROM users WHERE username = :identifier OR email = :identifier OR phone = :identifier AND password = :password";
         $stmt = $this->pdo->prepare($query);
         $stmt->execute([
@@ -38,15 +39,15 @@ class Users extends Models
             'password' => $password,
         ]);
         $user = $stmt->fetch();
-        if($user){
-            if(password_verify($password, $user['password'])){
+        if ($user) {
+            if (password_verify($password, $user['password'])) {
+                $user = ['id' => $user['id'], 'username' => $user['username']];
                 return $user;
-            }else{
+            } else {
                 return false;
             }
-        }else{
+        } else {
             return false;
         }
     }
-
 }
