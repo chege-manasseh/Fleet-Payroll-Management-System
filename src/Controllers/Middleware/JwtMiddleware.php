@@ -6,6 +6,7 @@ use App\Core\Request;
 use App\Core\Response;
 use Exception;
 use App\Controllers\Controller;
+use App\Storage\Database;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 
@@ -15,10 +16,13 @@ class JwtMiddleware extends Controller
     public $data;
     public $request;
     public $response;
-    public function __construct(Request $request,Response $response)
+    public $db;
+
+    public function __construct(Request $request,Response $response,Database $db)
     {
         $this->request = $request;
         $this->response = $response;
+        $this->db=$db;
     }
     
     public function handle()
