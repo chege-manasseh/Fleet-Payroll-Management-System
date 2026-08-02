@@ -20,8 +20,8 @@ class AuthService
 
     public function __construct(Database $db, Users $users, UserTokens $userTokens, Response $response)
     {
-        $this->users = new Users();
-        $this->userTokens = new UserTokens();
+        $this->users =$users;
+        $this->userTokens = $userTokens;
         $this->db = $db;
         $this->response = $response;
     }
@@ -79,8 +79,8 @@ class AuthService
             if (strlen($phone) != 10) {
                 return $this->response->json('Phone number must be 10 digits', null, 400);
             }
-            if (strlen($password) < 8) {
-                return $this->response->json('Password must be at least 8 characters', null, 400);
+            if (strlen($password) < 8 || strlen($password) > 128) {
+                return $this->response->json('Password must be at least 8 characters and a max of 128 characters', null, 400);
             }
             if (!preg_match('/[A-Z]/', $password)) {
                 return $this->response->json('Password must contain at least one uppercase letter', null, 400);
