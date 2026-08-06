@@ -6,10 +6,15 @@ use App\Core\Response;
 
 class Controller
 {
+    private Response $response;
+    public function __construct(Response $response)
+    {
+        $this->response=$response;
+        throw new \Exception('Not implemented');
+    }
     protected function json(string $message, mixed $data, int $statusCode = 200)
     {
-        $response = new Response($message, $data, $statusCode, ['Content-Type' => 'application/json']);
-        return $response->send();
+        return $this->response->json($message,$data,$statusCode);
     }
 
 }
