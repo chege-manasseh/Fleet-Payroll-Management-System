@@ -15,11 +15,11 @@ class Users extends Models
         parent::__construct();
     }
 
-    public function registerUser($username, $phone, $password)
+    public function registerUser($username, $phone, $password,$role)
     {
-        $query = "INSERT INTO users (username, phone, password) VALUES (?, ?, ?)";
+        $query = "INSERT INTO users (username, phone, password,role) VALUES (?, ?, ?,?)";
         $stmt = $this->pdo->prepare($query);
-        $stmt->execute([$username, $phone, $password]);
+        $stmt->execute([$username, $phone, $password,$role]);
         $userId = $this->pdo->lastInsertId();
         $query = "SELECT * FROM users WHERE id = ?";
         $stmt = $this->pdo->prepare($query);
@@ -41,7 +41,7 @@ class Users extends Models
         $user = $stmt->fetch();
         if ($user) {
             if (password_verify($password, $user['password'])) {
-                $user = ['id' => $user['id'], 'username' => $user['username']];
+                $user = ['id' => $user['id'], 'username' => $user['username'],'role' => $user['role']];
                 return $user;
             } else {
                 return false;
