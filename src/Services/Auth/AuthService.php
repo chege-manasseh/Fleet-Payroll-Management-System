@@ -5,6 +5,7 @@ namespace App\Services\Auth;
 use App\Core\Response;
 use App\Models\Users;
 use App\Core\Request;
+use App\Models\RefreshTokens;
 use Firebase\JWT\JWT;
 use App\Models\UserTokens;
 use App\Storage\Database;
@@ -12,22 +13,23 @@ use App\Storage\Database;
 class AuthService
 {
     private Users $users;
-    private UserTokens $userTokens;
+    private RefreshTokens $refreshTokens;
     public  $message;
     public  $data;
     private Database $db;
     private Response $response;
 
-    public function __construct(Database $db, Users $users, UserTokens $userTokens, Response $response)
+    public function __construct(Database $db, Users $users, RefreshTokens $refreshTokens, Response $response)
     {
         $this->users =$users;
-        $this->userTokens = $userTokens;
+        $this->refreshTokens = $refreshTokens;
         $this->db = $db;
         $this->response = $response;
     }
 
     public function generateToken($userId, $role)
     {
+        //symmetric cryptography 
         $accessPayload = [
             'iss' => 'fleet-payroll-management-system',
             'iat' => time(),
@@ -54,6 +56,16 @@ class AuthService
         ]);
         $tokenHash = hash('sha256', $refreshToken);
 
+        //use CSRF if the application is not Single Domain and read it and return it as a http header  that is double submit method
+        // $csrfToken = bin2hex(random_bytes(32));
+        // setcookie('csrf',$csrfToken,[
+        //     'expires' => time() + $_ENV['JWT_EXPIRATION'],
+        //     'path' => '/api',
+        //     'secure' => false,
+        //     'httponly' => false,
+        //     'samesite' => 'None'
+        // ]);
+
         return [
             'accessToken' => $accessToken,
             'refreshToken' => $tokenHash,
@@ -68,6 +80,7 @@ class AuthService
             $username = $request->input('username');
             $phone = $request->input('phone');
             $password = $request->input('password');
+            $role = $request->input('role');
             //build a validater for username, phone and password
 
             if (!$username || !$phone || !$password) {
@@ -96,18 +109,17 @@ class AuthService
             }
 
             $passwordHash=password_hash($password,PASSWORD_ARGON2ID);
-            $user = $this->users->registerUser($username, $phone, $passwordHash);
+            $user = $this->users->registerUser($username, $phone, $passwordHash,$role);
             if ($user) {
                 $token = $this->generateToken($user['id'], 'user');
                 $message = $this->message = 'User registered successfully';
                 $data = $this->data = [
                     'username' => $user['username'],
                     'email' => $user['email'] ?? null,
-                    'id' => $user['id'],
-                    'token' => $token['accessToken'],
+                    'id' => $user['id']
                 ];
 
-                $this->userTokens->saveRefreshToken($user['id'], $token['refreshToken'], $token['expiresAt']);
+                $this->refreshTokens->saveRefreshToken($user['id'], $token['refreshToken'], $token['expiresAt']);
 
                 $this->db->commit();
                 return $this->response->json($message, $data);
@@ -121,6 +133,7 @@ class AuthService
 
     public function login(Request $request)
     {
+        // validate inputs to prevent Long password DoS
         if (!$request->input('username') || !$request->input('password')) {
             $message = $this->message = 'Please fill in all fields';
             $data = $this->data = null;
@@ -139,10 +152,9 @@ class AuthService
             $data = $this->data = [
                 'username' => $user['username'],
                 'email' => $user['email'] ?? null,
-                'id' => $user['id'],
-                'token' => $token['accessToken'],
+                'id' => $user['id']
             ];
-            $this->userTokens->saveRefreshToken($user['id'], $token['refreshToken'], $token['expiresAt']);
+            $this->refreshTokens->saveRefreshToken($user['id'], $token['refreshToken'], $token['expiresAt']);
             return $this->response->json($message, $data);
         }
     }
@@ -158,7 +170,7 @@ class AuthService
         if ($refreshToken) {
             $expiresAt = date(now());
             $userId = $request->input('userId');
-            $this->userTokens->updateRefreshToken($userId, $expiresAt);
+            $this->refreshTokens->updateRefreshToken($userId, $expiresAt);
             setcookie('refresh_token', '', time() - 3600, '/');
             setcookie('access_token', '', time() - 3600, '/');
             return $this->response->json('Logout successful', null, 200);
@@ -169,5 +181,10 @@ class AuthService
     public function changePassword(Request $request)
     {
         return $this->response->json('Change password endpoint', null, 200);
+    }
+
+    public function resetPassword(Request $request)
+    {
+
     }
 }

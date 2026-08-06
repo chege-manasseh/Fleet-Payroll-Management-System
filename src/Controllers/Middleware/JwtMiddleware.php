@@ -28,19 +28,19 @@ class JwtMiddleware extends Controller
     public function handle()
     {
         try{
-            $token = $this->request->getHeader('Authorization');
+            $token = $this->request->getCookie('access_token');
             if(!$token){
                 $message = 'Unauthorized';
-                $data = ['error' => 'Unauthorized'];
+                $data = ['error' => 'INVALID_TOKEN'];
                 return $this->response->json($message, $data, 401);
             }
-            $token = str_replace('Bearer ', '', $token);
+
             $decoded = JWT::decode($token, new Key($_ENV['JWT_SECRET'], $_ENV['JWT_ALGORITHM']));
             $this->request->setAttribute('user', $decoded);
             return true;
         }catch(Exception $e){
             $message = 'Unauthorized';
-            $data = ['error' => $e->getMessage()];
+            $data = ['error' => 'Unauthorized'];
             return $this->response->json($message, $data, 401);
         }
     }   
