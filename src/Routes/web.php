@@ -8,7 +8,7 @@ use App\Core\Container;
 use App\Storage\Database;
 use App\Controllers\HomeController;
 use App\Controllers\Auth\AuthController;
-use App\Controllers\Auth\RefreshToken;
+use App\Services\Auth\RefreshToken;
 
 $container = Container::getInstance();
 
@@ -45,6 +45,7 @@ $router->add('POST','/change-password',[AuthController::class, 'changePassword']
 $router->add('POST','/refresh',[RefreshToken::class, 'refreshToken']);
 $router->add('POST','/register',[AuthController::class, 'register']);
 $router->add('POST','/logout',[AuthController::class, 'logout']);
+$router->add('POST','/reset-password',[AuthController::class, 'resetPassword']);
 
 
 $publicRoutes = [
@@ -58,6 +59,7 @@ $publicRoutes = [
         '/register' => [AuthController::class, 'register'],
         '/logout' => [AuthController::class, 'logout'],
         '/refresh' => [RefreshToken::class, 'refreshToken'],
+        '/reset-password' => [AuthController::class, 'resetPassword']
     ],
 ];
 
