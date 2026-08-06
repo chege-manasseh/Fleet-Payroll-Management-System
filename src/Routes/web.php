@@ -58,7 +58,7 @@ $publicRoutes = [
         '/login' => [AuthController::class, 'login'],
         '/register' => [AuthController::class, 'register'],
         '/logout' => [AuthController::class, 'logout'],
-        '/refresh' => [RefreshToken::class, 'refreshToken'],
+        '/refresh' => [AuthController::class, 'refreshToken'],
         '/reset-password' => [AuthController::class, 'resetPassword']
     ],
 ];
