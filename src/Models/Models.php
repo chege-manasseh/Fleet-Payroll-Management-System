@@ -8,14 +8,8 @@ class Models
 {
     protected $db;
     protected $pdo;
-    public function __construct()
+    public function __construct(Database $db)
     {
-        $this->db = new Database();
-        $this->pdo = $this->db->getPDO();
-    }
-
-    public function getPDO()
-    {
-        return $this->pdo;
+        $this->db =$db;
     }
 }
