@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Core\Response;
+use PDO;
 
 class Users extends Models
 {
@@ -15,16 +16,12 @@ class Users extends Models
         parent::__construct();
     }
 
-    public function registerUser($username, $phone, $password,$role)
+    public function registerUser($username, $phone, $password, $role)
     {
         $query = "INSERT INTO users (username, phone, password,role) VALUES (?, ?, ?,?)";
         $stmt = $this->pdo->prepare($query);
-        $stmt->execute([$username, $phone, $password,$role]);
-        $userId = $this->pdo->lastInsertId();
-        $query = "SELECT * FROM users WHERE id = ?";
-        $stmt = $this->pdo->prepare($query);
-        $stmt->execute([$userId]);
-        $user = $stmt->fetch();
+        $stmt->execute([$username, $phone, $password, $role]);
+        $user = $this->pdo->lastInsertId();
         if ($user) {
             return $user;
         }
@@ -41,12 +38,33 @@ class Users extends Models
         $user = $stmt->fetch();
         if ($user) {
             if (password_verify($password, $user['password'])) {
-                $user = ['id' => $user['id'], 'username' => $user['username'],'role' => $user['role']];
+                $user = ['id' => $user['id'], 'username' => $user['username'], 'role' => $user['role']];
                 return $user;
             } else {
                 return false;
             }
         } else {
+            return false;
+        }
+    }
+
+    public function getUser($identifier)
+    {
+        $identifier = trim($identifier);
+        $query = "SELECT FROM users WHERE email = :indentifier OR phone= :indentifier OR id = :id LIMIT 1";
+        $stmt = $this->pdo->prepare($query);
+        $stmt = $this->pdo->execute([
+            'email' => $identifier,
+            'phone' => $identifier
+        ]);
+        $userRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($userRow) {
+            return [
+                'id' => $userRow['id'],
+                'email' => $userRow['email'],
+                'phone' => $userRow['phone'],
+            ];
+        }else{
             return false;
         }
     }

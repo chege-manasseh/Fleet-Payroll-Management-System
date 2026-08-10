@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Models;
+use PDO;
 
 class RefreshTokens extends Models
 {
@@ -11,20 +12,21 @@ class RefreshTokens extends Models
     }
 
     //CRUD
-    public function saveRefreshToken($userId, $refreshToken, $expiresAt)
+    public function saveRefreshToken($userId, $refreshToken, $expiresAt,$parentToken=null,$rootToken=null)
     {
-        $query = "INSERT INTO refresh_tokens (user_id, token_hash, expires_at) VALUES (?, ?, ?)";
+        $query = "INSERT INTO refresh_tokens (user_id, token_hash, expires_at,parent_token_hash,root_token_hash) VALUES (?, ?, ?,?,?)";
         $stmt = $this->pdo->prepare($query);
-        $stmt->execute([$userId, $refreshToken, $expiresAt]);
+        $stmt->execute([$userId, $refreshToken, $expiresAt,$parentToken,$rootToken]);
         return $stmt->rowCount();
     }
 
     public function getRefreshToken($token)
     {
-        $query = "SELECT * FROM refresh_tokens WHERE token_hash = ?";
+        $query = "SELECT id,user_id,token_hash,is_revoked,parent_token_hash,root_token_hash FROM refresh_tokens WHERE token_hash = ?";
         $stmt = $this->pdo->prepare($query);
         $stmt->execute([$token]);
-        return $stmt->fetch();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+
     }
 
     public function updateRefreshToken($userId, $expiresAt)

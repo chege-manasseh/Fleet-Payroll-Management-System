@@ -32,21 +32,17 @@ class AuthController extends Controller
     public function changePassword(Request $request){
         return $this->authService->changePassword($request);
     }
-    public function forgotPassword(Request $request){
-        return $this->authService->forgotPassword($request);
-    }
+
     public function resetPassword(Request $request){
-        return $this->authService->resetPassword($request,$this->response);
+        return $this->authService->resetPassword($request);
     }
-    public function verifyResetPassword(Request $request){
-        return $this->authService->verifyResetPassword($request,$this->response);
-    }
-    public function verifyChangePassword(Request $request){
-        return $this->authService->verifyChangePassword($request,$this->response);
-    }
-    public function verifyForgotPassword(Request $request){
-        return $this->authService->verifyForgotPassword($request,$this->response);
-    }
+    // public function verifyResetPassword(Request $request){
+    //     return $this->authService->verifyResetPassword($request,$this->response);
+    // }
+    // public function verifyChangePassword(Request $request){
+    //     return $this->authService->verifyChangePassword($request,$this->response);
+    // }
+    
     public function refresh(Request $request){
         return $this->refreshTokenService->refreshToken($request);
     }
