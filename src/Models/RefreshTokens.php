@@ -7,34 +7,58 @@ use PDO;
 
 class RefreshTokens extends Models
 {
-    public function __construct()
-    {
-    }
+    public function __construct() {}
 
     //CRUD
-    public function saveRefreshToken($userId, $refreshToken, $expiresAt,$parentToken=null,$rootToken=null)
+    public function saveRefreshToken($data)
     {
-        $query = "INSERT INTO refresh_tokens (user_id, token_hash, expires_at,parent_token_hash,root_token_hash) VALUES (?, ?, ?,?,?)";
+        if (empty($data)) {
+            return false;
+        }
+
+        $fields = [];
+        $bindings = [];
+        $placeHolders =[];
+
+        foreach ($data as $column => $value) {
+            $fields[] = "`$column`";
+            $placeHolders =":column";
+            $bindings[":column"] = $value;
+        }
+        $columnString = implode(",", $fields);
+        $placeHoldersString = implode("," , $placeHolders);
+        $query = "INSERT INTO refresh_tokens ($columnString) VALUES ($placeHolders)";
         $stmt = $this->pdo->prepare($query);
-        $stmt->execute([$userId, $refreshToken, $expiresAt,$parentToken,$rootToken]);
+        $stmt->execute($bindings);
         return $stmt->rowCount();
     }
 
-    public function getRefreshToken($token)
+    public function getRefreshToken($hashToken)
     {
-        $query = "SELECT id,user_id,token_hash,is_revoked,parent_token_hash,root_token_hash FROM refresh_tokens WHERE token_hash = ?";
+        $query = "SELECT user_id,token_hash,is_revoked,parent_token_hash,root_token_hash FROM refresh_tokens WHERE token_hash = ?";
         $stmt = $this->pdo->prepare($query);
-        $stmt->execute([$token]);
+        $stmt->execute([$hashToken]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
-
     }
 
-    public function updateRefreshToken($userId, $expiresAt)
+    public function updateRefreshToken($data, $hashToken)
     {
-        //$query = "SELECT user_";
-        $query = "UPDATE refresh_tokens SET expires_at = ? WHERE user_id = ?";
-        $stmt = $this->pdo->prepare($query);
-        $stmt->execute([$expiresAt, $userId]);
+        if (empty($data)) {
+            return false;
+        }
+
+        $fields = [];
+        $bindings = [];
+
+        foreach ($data as $column => $value) {
+            $fields[] = "`$column` = :$column";
+            $bindings[":$column"] = $value;
+        }
+        $fieldString = implode(",", $fields);
+        $sql = "UPDATE refresh_tokens SET $fieldString WHERE `token_hash`=:token_hash";
+        $bindings[':token_hash'] =$hashToken;
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($bindings);
         return $stmt->rowCount();
     }
     public function deleteRefreshToken($userId)
