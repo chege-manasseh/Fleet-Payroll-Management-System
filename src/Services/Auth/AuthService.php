@@ -7,7 +7,7 @@ use App\Models\Users;
 use App\Core\Request;
 use App\Models\RefreshTokens;
 use Firebase\JWT\JWT;
-use App\Models\UserTokens;
+use App\Models\ResetPasswordTokens;
 use App\Storage\Database;
 
 class AuthService
@@ -18,10 +18,11 @@ class AuthService
     public  $data;
     private Database $db;
     private Response $response;
+    private ResetPasswordTokens $resetPasswordTokens;
 
-    public function __construct(Database $db, Users $users, RefreshTokens $refreshTokens, Response $response)
+    public function __construct(Database $db, Users $users, RefreshTokens $refreshTokens, ResetPasswordTokens $resetPasswordTokens, Response $response)
     {
-        $this->users =$users;
+        $this->users = $users;
         $this->refreshTokens = $refreshTokens;
         $this->db = $db;
         $this->response = $response;
@@ -108,8 +109,8 @@ class AuthService
                 return $this->response->json('Password must contain at least one special character', null, 400);
             }
 
-            $passwordHash=password_hash($password,PASSWORD_ARGON2ID);
-            $user = $this->users->registerUser($username, $phone, $passwordHash,$role);
+            $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
+            $user = $this->users->registerUser($username, $phone, $passwordHash, $role);
             if ($user) {
                 $token = $this->generateToken($user['id'], 'user');
                 $message = $this->message = 'User registered successfully';
@@ -165,12 +166,17 @@ class AuthService
 
     public function logout(Request $request)
     {
-        $refreshToken = $request->getCookie('refresh_token');
-        echo $refreshToken;
-        if ($refreshToken) {
-            $expiresAt = date(now());
+        $rawToken = $request->getCookie('refresh_token');
+        $hashToken = hash('sha256', $rawToken);
+        if ($hashToken) {
+            $expiresAt = date('Y-m-d H:i:s', time() - 3600);
             $userId = $request->input('userId');
-            $this->refreshTokens->updateRefreshToken($userId, $expiresAt);
+            $data=[
+                'expires_at' => $expiresAt,
+                'is_revoked' => true,
+                'revoked_at' => $expiresAt,
+            ];
+            $this->refreshTokens->updateRefreshToken($data,$hashToken);
             setcookie('refresh_token', '', time() - 3600, '/');
             setcookie('access_token', '', time() - 3600, '/');
             return $this->response->json('Logout successful', null, 200);
@@ -185,6 +191,41 @@ class AuthService
 
     public function resetPassword(Request $request)
     {
-
+        $email = $request->input("email");
+        $phone = $request->input("phone");
+        if (!isset($email) || !isset($phone)) {
+            $message = $this->message = "Input your email or phone number";
+            $data = null;
+            return $this->response->json($message, $data, 401);
+        }
+        if (isset($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $user = $this->users->getUser($email);
+            if ($user) {
+                $rawSecret = bin2hex(random_bytes(32));
+                $deliveryChannel = 'email';
+                $lifespan = 900;
+                $resetlink = 'https://localhost:8000/';
+                //notification of the user via email that is sending of email here 
+            } else {
+                return $this->response->json('No user found', null, 404);
+            }
+        } else {
+            $user = $this->users->getUser($phone);
+            if ($user) {
+                $rawSecret = (string) random_int(100000, 999999);
+                $deliveryChannel = 'phone';
+                $lifespan = 300;
+                $smsMessage = "Your reset 6 digit number is this" . $rawSecret;
+                // notification of user via sms 
+            } else {
+                return $this->response->json('No user found', null, 404);
+            }
+        }
+        $tokenHash = hash('sha256', $rawSecret);
+        $expirationTime = date('Y-m-d H:i:s', time() + $lifespan);
+        $userSave = $this->resetPasswordTokens->createResetToken();
+        if ($userSave) {
+            return $this->response->json('Password reset successful log in', null, 200);
+        }
     }
 }
