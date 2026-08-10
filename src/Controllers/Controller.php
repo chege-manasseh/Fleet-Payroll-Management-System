@@ -10,7 +10,6 @@ class Controller
     public function __construct(Response $response)
     {
         $this->response=$response;
-        throw new \Exception('Not implemented');
     }
     protected function json(string $message, mixed $data, int $statusCode = 200)
     {
