@@ -64,6 +64,29 @@ class Users extends Models
                 'email' => $userRow['email'],
                 'phone' => $userRow['phone'],
             ];
+        } else {
+            return false;
+        }
+    }
+
+    public function updateUser($data, $id)
+    {
+
+        $columns = [];
+        $bindings = [];
+
+        foreach ($data as $column => $value) {
+            $columns = "`$column` = :$column";
+            $bindings[":$column"] = $value;
+        }
+        $columnString = implode(",", $columns);
+        $bindings[":id"] = $id;
+        $sql = "UPDATE users SET $columnString WHERE `id`=:id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt = $this->pdo->execute([$bindings]);
+
+        if ($stmt) {
+            return true;
         }else{
             return false;
         }

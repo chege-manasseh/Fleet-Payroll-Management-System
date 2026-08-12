@@ -28,7 +28,7 @@ class AuthService
         $this->response = $response;
     }
 
-    public function generateToken($userId, $role)
+    public function generateToken($userId, $role = 'user')
     {
         //symmetric cryptography 
         $accessPayload = [
@@ -112,22 +112,21 @@ class AuthService
             $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
             $user = $this->users->registerUser($username, $phone, $passwordHash, $role);
             if ($user) {
-                $token = $this->generateToken($user['id'], 'user');
-                $message = $this->message = 'User registered successfully';
-                $data = $this->data = [
-                    'username' => $user['username'],
-                    'email' => $user['email'] ?? null,
-                    'id' => $user['id']
+                $token = $this->generateToken($user['id']);
+                $data = [
+                    'user_id' => $user['id'],
+                    'token_hash' => $token['refreshToken'],
+                    'expires_at' => $token['expiresAt']
                 ];
 
-                $this->refreshTokens->saveRefreshToken($user['id'], $token['refreshToken'], $token['expiresAt']);
+                $refreshToken = $this->refreshTokens->saveRefreshToken($data);
 
                 $this->db->commit();
-                return $this->response->json($message, $data);
+                return $refreshToken;
             }
         } catch (\Exception $e) {
             $this->db->rollBack();
-            return $this->response->json('User registration failed', null, 401);
+            return false;
         }
     }
 
@@ -148,15 +147,14 @@ class AuthService
         $user = $this->users->verifyUser($identifier, $password);
 
         if ($user) {
-            $token = $this->generateToken($user['id'], 'user');
-            $message = $this->message = 'Login successful';
-            $data = $this->data = [
-                'username' => $user['username'],
-                'email' => $user['email'] ?? null,
-                'id' => $user['id']
+            $token = $this->generateToken($user['id'], $user['role']);
+            $data = [
+                'user_id' => $user['id'],
+                'token_hash' => $token['refreshToken'],
+                'expires_at' => $token['expiresAt']
             ];
-            $this->refreshTokens->saveRefreshToken($user['id'], $token['refreshToken'], $token['expiresAt']);
-            return $this->response->json($message, $data);
+
+            return  $this->refreshTokens->saveRefreshToken($data);
         }
     }
     public function verifyEmail(Request $request)
@@ -171,12 +169,12 @@ class AuthService
         if ($hashToken) {
             $expiresAt = date('Y-m-d H:i:s', time() - 3600);
             $userId = $request->input('userId');
-            $data=[
+            $data = [
                 'expires_at' => $expiresAt,
                 'is_revoked' => true,
                 'revoked_at' => $expiresAt,
             ];
-            $this->refreshTokens->updateRefreshToken($data,$hashToken);
+            $this->refreshTokens->updateRefreshToken($data, $hashToken);
             setcookie('refresh_token', '', time() - 3600, '/');
             setcookie('access_token', '', time() - 3600, '/');
             return $this->response->json('Logout successful', null, 200);
@@ -184,48 +182,76 @@ class AuthService
         return $this->response->json('Logout failed.', null, 400);
     }
 
-    public function changePassword(Request $request)
+    public function changePassword($id, $currentPassword, $newPassword, $confirmPassword)
     {
-        return $this->response->json('Change password endpoint', null, 200);
+        $user = $this->users->verifyUser($id, $currentPassword);
+        if ($user && hash_equals($newPassword, $confirmPassword)) {
+            $hashedPassword = password_hash($newPassword, PASSWORD_ARGON2ID);
+            $data = [
+                "password" => $hashedPassword
+            ];
+
+            $user = $this->users->updateUser($data, $id);
+            if ($user) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
     }
 
     public function resetPassword(Request $request)
     {
         $email = $request->input("email");
         $phone = $request->input("phone");
+        $data=[];
         if (!isset($email) || !isset($phone)) {
-            $message = $this->message = "Input your email or phone number";
-            $data = null;
-            return $this->response->json($message, $data, 401);
+            return false;
         }
         if (isset($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $user = $this->users->getUser($email);
             if ($user) {
                 $rawSecret = bin2hex(random_bytes(32));
-                $deliveryChannel = 'email';
+                $hashSecret = hash("sha256", $rawSecret);
+                $deliveryChannel = "email";
                 $lifespan = 900;
                 $resetlink = 'https://localhost:8000/';
+                $data = [
+                    'user_id' => $user['id'],
+                    'token_hash' => $hashSecret,
+                    'expires_at'=> time() + 18000,
+                    'delivery_channel' => $deliveryChannel,
+                    'failed_attempts' => 0
+                ];
                 //notification of the user via email that is sending of email here 
             } else {
-                return $this->response->json('No user found', null, 404);
+                return false;
             }
         } else {
             $user = $this->users->getUser($phone);
             if ($user) {
                 $rawSecret = (string) random_int(100000, 999999);
+                $hashSecret = password_hash($rawSecret,PASSWORD_ARGON2ID);
                 $deliveryChannel = 'phone';
                 $lifespan = 300;
                 $smsMessage = "Your reset 6 digit number is this" . $rawSecret;
+                $data = [
+                    'user_id' => $user['id'],
+                    'token_hash' => $hashSecret,
+                    'expires_at'=> time() + $lifespan,
+                    'delivery_channel' => $deliveryChannel,
+                    'failed_attempts' => 0
+                ];
                 // notification of user via sms 
             } else {
-                return $this->response->json('No user found', null, 404);
+                return false;
             }
         }
-        $tokenHash = hash('sha256', $rawSecret);
-        $expirationTime = date('Y-m-d H:i:s', time() + $lifespan);
-        $userSave = $this->resetPasswordTokens->createResetToken();
+        $userSave = $this->resetPasswordTokens->createResetToken($data);
         if ($userSave) {
-            return $this->response->json('Password reset successful log in', null, 200);
+            return true;
         }
     }
 }

@@ -1,19 +1,30 @@
 <?php
+
 namespace App\Models;
 
 
 class ResetPasswordTokens extends Models
 {
-    public function __construct() {
-    }
+    public function __construct() {}
 
-    public function createResetToken($id,$tokenHash,$expirationTime,$deliveryChannel){
-        $query = "INSERT INTO password_reset_tokens (user_id,token_hash,expires_at,delivery_channel)VALUES (? ? ? ?)";
+    public function createResetToken($data)
+    {
+
+
+        $fields = [];
+        $bindings = [];
+        $placeHolders =[];
+
+        foreach ($data as $column => $value) {
+            $fields[]="`$column`";
+            $placeHolders[]=":$column";
+            $bindings[":$column"]= $value;
+        }
+        $columnString = implode(",",$fields);
+        $placeHolderString = implode(",",$placeHolders);
+        $query = "INSERT INTO password_reset_tokens ($columnString)VALUES ($placeHolderString)";
         $stmt = $this->pdo->prepare($query);
-        $stmt = $this->pdo->execute([$id,$tokenHash,$expirationTime,$deliveryChannel]);
-        $stmt = $this->pdo->fetch();
-        return $stmt;
         
-
+        return $stmt->pdo->execute($bindings);
     }
 }

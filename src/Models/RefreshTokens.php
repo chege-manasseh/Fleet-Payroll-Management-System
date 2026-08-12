@@ -22,15 +22,19 @@ class RefreshTokens extends Models
 
         foreach ($data as $column => $value) {
             $fields[] = "`$column`";
-            $placeHolders =":column";
-            $bindings[":column"] = $value;
+            $placeHolders =":$column";
+            $bindings[":$column"] = $value;
         }
         $columnString = implode(",", $fields);
         $placeHoldersString = implode("," , $placeHolders);
-        $query = "INSERT INTO refresh_tokens ($columnString) VALUES ($placeHolders)";
+        $sql = "UPDATE refresh_tokens SET is_revoked = TRUE WHERE user_id:id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->pdo->execute([
+            'id' =>$data['user_id']
+        ]);
+        $query = "INSERT INTO refresh_tokens ($columnString) VALUES ($placeHoldersString)";
         $stmt = $this->pdo->prepare($query);
-        $stmt->execute($bindings);
-        return $stmt->rowCount();
+        return $stmt->execute($bindings);
     }
 
     public function getRefreshToken($hashToken)
