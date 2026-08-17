@@ -9,7 +9,9 @@ use App\Models\RefreshTokens;
 use Firebase\JWT\JWT;
 use App\Models\ResetPasswordTokens;
 use App\Storage\Database;
+use Exception;
 
+// PHASE 1: AuthService still builds HTTP responses and sets cookies directly instead of returning data to the controller.
 class AuthService
 {
     private Users $users;
@@ -26,193 +28,59 @@ class AuthService
         $this->refreshTokens = $refreshTokens;
         $this->db = $db;
         $this->response = $response;
+        $this->resetPasswordTokens = $resetPasswordTokens;
     }
 
-    public function generateToken($userId, $role = 'user')
+
+
+    public function register(string $username, string $phone, string $password, string $role = null)
     {
-        //symmetric cryptography 
-        $accessPayload = [
-            'iss' => 'fleet-payroll-management-system',
-            'iat' => time(),
-            'exp' => time() + $_ENV['JWT_EXPIRATION'],
-            'userId' => $userId,
-            'role' => $role,
-        ];
-        $accessToken = JWT::encode($accessPayload, $_ENV['JWT_SECRET'], $_ENV['JWT_ALGORITHM']);
-        setcookie('access_token', $accessToken, [
-            'expires' => time() + $_ENV['JWT_EXPIRATION'],
-            'path' => '/api',
-            'secure' => false,
-            'httponly' => true,
-            'samesite' => 'Strict'
-        ]);
-        $refreshToken = bin2hex(random_bytes(40));
-        $expiresAt = date('Y-m-d H:i:s', time() + (30 * 24 * 60 * 60)); // 30 
-        setcookie('refresh_token', $refreshToken, [
-            'expires' => time() + (30 * 24 * 60 * 60),
-            'path' => '/api/refresh',
-            'secure' => false,
-            'httponly' => true,
-            'samesite' => 'Strict'
-        ]);
-        $tokenHash = hash('sha256', $refreshToken);
-
-        //use CSRF if the application is not Single Domain and read it and return it as a http header  that is double submit method
-        // $csrfToken = bin2hex(random_bytes(32));
-        // setcookie('csrf',$csrfToken,[
-        //     'expires' => time() + $_ENV['JWT_EXPIRATION'],
-        //     'path' => '/api',
-        //     'secure' => false,
-        //     'httponly' => false,
-        //     'samesite' => 'None'
-        // ]);
-
-        return [
-            'accessToken' => $accessToken,
-            'refreshToken' => $tokenHash,
-            'expiresAt' => $expiresAt,
-        ];
-    }
-
-    public function register(Request $request)
-    {
-        try {
-            $this->db->beginTransaction();
-            $username = $request->input('username');
-            $phone = $request->input('phone');
-            $password = $request->input('password');
-            $role = $request->input('role');
-            //build a validater for username, phone and password
-
-            if (!$username || !$phone || !$password) {
-                return $this->response->json('Please fill in all fields {$username, $phone, $password}', null, 400);
-            }
-            if (strlen($username) < 3 || strlen($username) > 20) {
-                return $this->response->json('Username must be between 3 and 20 characters', null, 400);
-            }
-            if (strlen($phone) != 10) {
-                return $this->response->json('Phone number must be 10 digits', null, 400);
-            }
-            if (strlen($password) < 8 || strlen($password) > 128) {
-                return $this->response->json('Password must be at least 8 characters and a max of 128 characters', null, 400);
-            }
-            if (!preg_match('/[A-Z]/', $password)) {
-                return $this->response->json('Password must contain at least one uppercase letter', null, 400);
-            }
-            if (!preg_match('/[a-z]/', $password)) {
-                return $this->response->json('Password must contain at least one lowercase letter', null, 400);
-            }
-            if (!preg_match('/[0-9]/', $password)) {
-                return $this->response->json('Password must contain at least one number', null, 400);
-            }
-            if (!preg_match('/[!@#$%^&*_]/', $password)) {
-                return $this->response->json('Password must contain at least one special character', null, 400);
-            }
-
-            $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
-            $user = $this->users->registerUser($username, $phone, $passwordHash, $role);
-            if ($user) {
-                $token = $this->generateToken($user['id']);
-                $data = [
-                    'user_id' => $user['id'],
-                    'token_hash' => $token['refreshToken'],
-                    'expires_at' => $token['expiresAt']
-                ];
-
-                $refreshToken = $this->refreshTokens->saveRefreshToken($data);
-
-                $this->db->commit();
-                return $refreshToken;
-            }
-        } catch (\Exception $e) {
-            $this->db->rollBack();
-            return false;
+        if (!$username || !$phone || !$password) {
+            return [null, "Please fill in all the details"];
         }
-    }
-
-
-    public function login(Request $request)
-    {
-        // validate inputs to prevent Long password DoS
-        if (!$request->input('username') || !$request->input('password')) {
-            $message = $this->message = 'Please fill in all fields';
-            $data = $this->data = null;
-            return $this->response->json($message, $data, 400);
+        if (strlen($username) < 3 || strlen($username) > 20) {
+            return [null, 'Username must be between 3 and 20 characters'];
         }
-        //build a validater for email and username and phone number
-
-        $identifier = $request->input('username');
-        $password = $request->input('password');
-
-        $user = $this->users->verifyUser($identifier, $password);
-
+        if (strlen($phone) != 10) {
+            return [null, 'Phone number less than the expected characters'];
+        }
+        if (strlen($password) < 8 || strlen($password) > 128) {
+            return [null, "Password must be at least 8 characters and a max of 128 characters and alphanumeric"];
+        }
+        $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
+        $user = $this->users->registerUser($username, $phone, $passwordHash, $role);
         if ($user) {
-            $token = $this->generateToken($user['id'], $user['role']);
-            $data = [
-                'user_id' => $user['id'],
-                'token_hash' => $token['refreshToken'],
-                'expires_at' => $token['expiresAt']
-            ];
-
-            return  $this->refreshTokens->saveRefreshToken($data);
+            return [$user, null];
+        } else {
+            return [null, "Unable to create user"];
         }
     }
-    public function verifyEmail(Request $request)
-    {
-        return $this->response->json('Verify email endpoint', null, 200);
-    }
 
-    public function logout(Request $request)
-    {
-        $rawToken = $request->getCookie('refresh_token');
-        $hashToken = hash('sha256', $rawToken);
-        if ($hashToken) {
-            $expiresAt = date('Y-m-d H:i:s', time() - 3600);
-            $userId = $request->input('userId');
-            $data = [
-                'expires_at' => $expiresAt,
-                'is_revoked' => true,
-                'revoked_at' => $expiresAt,
-            ];
-            $this->refreshTokens->updateRefreshToken($data, $hashToken);
-            setcookie('refresh_token', '', time() - 3600, '/');
-            setcookie('access_token', '', time() - 3600, '/');
-            return $this->response->json('Logout successful', null, 200);
-        }
-        return $this->response->json('Logout failed.', null, 400);
-    }
 
     public function changePassword($id, $currentPassword, $newPassword, $confirmPassword)
     {
+
         $user = $this->users->verifyUser($id, $currentPassword);
-        if ($user && hash_equals($newPassword, $confirmPassword)) {
+
+        if ($user) {
             $hashedPassword = password_hash($newPassword, PASSWORD_ARGON2ID);
             $data = [
                 "password" => $hashedPassword
             ];
 
-            $user = $this->users->updateUser($data, $id);
-            if ($user) {
-                return true;
-            } else {
-                return false;
-            }
+            return $this->users->updateUser($data, $id);
         } else {
             return false;
         }
     }
 
-    public function resetPassword(Request $request)
+    // PHASE 1: resetPassword is outside the Phase 1 gate but remains incomplete/broken if invoked.
+    public function resetPassword($identifier)
     {
-        $email = $request->input("email");
-        $phone = $request->input("phone");
-        $data=[];
-        if (!isset($email) || !isset($phone)) {
-            return false;
-        }
-        if (isset($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $user = $this->users->getUser($email);
-            if ($user) {
+        $user = $this->users->getUser($identifier);
+        $data = [];
+        if ($user) {
+            if (filter_var($identifier, FILTER_VALIDATE_EMAIL)) {
                 $rawSecret = bin2hex(random_bytes(32));
                 $hashSecret = hash("sha256", $rawSecret);
                 $deliveryChannel = "email";
@@ -221,34 +89,39 @@ class AuthService
                 $data = [
                     'user_id' => $user['id'],
                     'token_hash' => $hashSecret,
-                    'expires_at'=> time() + 18000,
+                    'expires_at' => time() + 18000,
                     'delivery_channel' => $deliveryChannel,
                     'failed_attempts' => 0
                 ];
-                //notification of the user via email that is sending of email here 
+                $resetToken = $this->resetPasswordTokens->createResetToken($data);
+                if ($resetToken) {
+                    //notification of the user via email that is sending of email here 
+                    return True;
+                }
             } else {
-                return false;
-            }
-        } else {
-            $user = $this->users->getUser($phone);
-            if ($user) {
+
                 $rawSecret = (string) random_int(100000, 999999);
-                $hashSecret = password_hash($rawSecret,PASSWORD_ARGON2ID);
+                $hashSecret = password_hash($rawSecret, PASSWORD_ARGON2ID);
                 $deliveryChannel = 'phone';
                 $lifespan = 300;
                 $smsMessage = "Your reset 6 digit number is this" . $rawSecret;
                 $data = [
                     'user_id' => $user['id'],
                     'token_hash' => $hashSecret,
-                    'expires_at'=> time() + $lifespan,
+                    'expires_at' => time() + $lifespan,
                     'delivery_channel' => $deliveryChannel,
                     'failed_attempts' => 0
                 ];
-                // notification of user via sms 
-            } else {
-                return false;
+                $resetToken = $this->resetPasswordTokens->createResetToken($data);
+                if ($resetToken) {
+                    // notification of user via sms
+                    return True;
+                }
             }
+        } else {
+            return false;
         }
+        // PHASE 1: createResetToken() calls $stmt->pdo->execute(), which is invalid PDO usage.
         $userSave = $this->resetPasswordTokens->createResetToken($data);
         if ($userSave) {
             return true;
