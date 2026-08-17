@@ -3,14 +3,13 @@
 namespace App\Models;
 
 
+
 class ResetPasswordTokens extends Models
 {
     public function __construct() {}
 
-    public function createResetToken($data)
+    public function createResetToken(array $data)
     {
-
-
         $fields = [];
         $bindings = [];
         $placeHolders =[];
@@ -25,6 +24,6 @@ class ResetPasswordTokens extends Models
         $query = "INSERT INTO password_reset_tokens ($columnString)VALUES ($placeHolderString)";
         $stmt = $this->pdo->prepare($query);
         
-        return $stmt->pdo->execute($bindings);
+        return $stmt->execute($bindings);
     }
 }
