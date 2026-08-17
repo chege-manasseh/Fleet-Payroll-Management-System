@@ -18,11 +18,11 @@ class JwtMiddleware extends Controller
     public $response;
     public $db;
 
-    public function __construct(Request $request,Response $response,Database $db)
+    public function __construct(Request $request,Response $response)
     {
         $this->request = $request;
         $this->response = $response;
-        $this->db=$db;
+      
     }
     
     public function handle()

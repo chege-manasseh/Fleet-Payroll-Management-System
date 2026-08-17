@@ -38,29 +38,29 @@ $request = $container->make(Request::class);
 $response = $container->make(Response::class);
 $jwtMiddleware = $container->make(JwtMiddleware::class);
 
-$router->add('GET', '/', [HomeController::class, 'index']);
-$router->add('POST', '/login', [AuthController::class, 'login']);
-$router->add('GET', '/testconnection', [HomeController::class, 'testConnection']);
-$router->add('POST', '/change-password', [AuthController::class, 'changePassword']);
-$router->add('POST', '/refresh', [RefreshToken::class, 'refreshToken']);
-$router->add('POST', '/register', [AuthController::class, 'register']);
-$router->add('POST', '/logout', [AuthController::class, 'logout']);
-$router->add('POST', '/reset-password', [AuthController::class, 'resetPassword']);
-
+$router->add('GET', '/api/', [HomeController::class, 'index']);
+$router->add('POST', '/api/login', [AuthController::class, 'login']);
+$router->add('GET', '/api/testconnection', [HomeController::class, 'testConnection']);
+$router->add('POST', '/api/change-password', [AuthController::class, 'changePassword']);
+$router->add('POST', '/api/register', [AuthController::class, 'register']);
+$router->add('POST', '/api/logout', [AuthController::class, 'logout']);
+$router->add('POST', '/api/reset-password', [AuthController::class, 'resetPassword']);
+$router->add('POST', '/api/refresh', [AuthController::class, 'refresh']);
 
 $publicRoutes = [
     'GET' => [
-        '/' => [HomeController::class, 'index'],
-        '/login' => [AuthController::class, 'login'],
-        '/testconnection' => [HomeController::class, 'testConnection'],
+        '/api/' => [HomeController::class, 'index'],
+        '/api/login' => [AuthController::class, 'login'],
+        '/api/testconnection' => [HomeController::class, 'testConnection'],
     ],
     'POST' => [
-        '/login' => [AuthController::class, 'login'],
-        '/register' => [AuthController::class, 'register'],
-        '/logout' => [AuthController::class, 'logout'],
-        '/refresh' => [AuthController::class, 'refreshToken'],
-        '/reset-password' => [AuthController::class, 'resetPassword'],
-        '/' => [HomeController::class, 'index']
+        '/api/login' => [AuthController::class, 'login'],
+        '/api/register' => [AuthController::class, 'register'],
+        '/api/logout' => [AuthController::class, 'logout'],
+
+        '/api/refresh' => [AuthController::class, 'refresh'],
+        '/api/reset-password' => [AuthController::class, 'resetPassword'],
+        '/api/' => [HomeController::class, 'index']
     ],
 ];
 

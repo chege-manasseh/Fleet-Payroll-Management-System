@@ -18,24 +18,31 @@ class RefreshTokens extends Models
 
         $fields = [];
         $bindings = [];
-        $placeHolders =[];
+        $placeHolders = [];
 
         foreach ($data as $column => $value) {
             $fields[] = "`$column`";
-            $placeHolders =":column";
-            $bindings[":column"] = $value;
+
+            $placeHolders[] = ":$column";
+            $bindings[":$column"] = $value;
         }
         $columnString = implode(",", $fields);
-        $placeHoldersString = implode("," , $placeHolders);
-        $query = "INSERT INTO refresh_tokens ($columnString) VALUES ($placeHolders)";
+        $placeHoldersString = implode(",", $placeHolders);
+
+        $sql = "UPDATE refresh_tokens SET is_revoked = TRUE WHERE user_id = :id";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            'id' => $data['user_id']
+        ]);
+        $query = "INSERT INTO refresh_tokens ($columnString) VALUES ($placeHoldersString)";
         $stmt = $this->pdo->prepare($query);
-        $stmt->execute($bindings);
-        return $stmt->rowCount();
+        return $stmt->execute($bindings);
     }
 
     public function getRefreshToken($hashToken)
     {
-        $query = "SELECT user_id,token_hash,is_revoked,parent_token_hash,root_token_hash FROM refresh_tokens WHERE token_hash = ?";
+        
+        $query = "SELECT user_id,token_hash,is_revoked,parent_token_hash,root_token_hash,expires_at FROM refresh_tokens WHERE token_hash = ?";
         $stmt = $this->pdo->prepare($query);
         $stmt->execute([$hashToken]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
@@ -56,7 +63,7 @@ class RefreshTokens extends Models
         }
         $fieldString = implode(",", $fields);
         $sql = "UPDATE refresh_tokens SET $fieldString WHERE `token_hash`=:token_hash";
-        $bindings[':token_hash'] =$hashToken;
+        $bindings[':token_hash'] = $hashToken;
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($bindings);
         return $stmt->rowCount();
