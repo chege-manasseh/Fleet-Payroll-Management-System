@@ -38,7 +38,7 @@ $request = $container->make(Request::class);
 $response = $container->make(Response::class);
 $jwtMiddleware = $container->make(JwtMiddleware::class);
 
-$router->add('GET', '/api/', [HomeController::class, 'index']);
+$router->add('GET', '/api', [HomeController::class, 'index']);
 $router->add('POST', '/api/login', [AuthController::class, 'login']);
 $router->add('GET', '/api/testconnection', [HomeController::class, 'testConnection']);
 $router->add('POST', '/api/change-password', [AuthController::class, 'changePassword']);
@@ -49,7 +49,7 @@ $router->add('POST', '/api/refresh', [AuthController::class, 'refresh']);
 
 $publicRoutes = [
     'GET' => [
-        '/api/' => [HomeController::class, 'index'],
+        '/api' => [HomeController::class, 'index'],
         '/api/login' => [AuthController::class, 'login'],
         '/api/testconnection' => [HomeController::class, 'testConnection'],
     ],
@@ -60,7 +60,7 @@ $publicRoutes = [
 
         '/api/refresh' => [AuthController::class, 'refresh'],
         '/api/reset-password' => [AuthController::class, 'resetPassword'],
-        '/api/' => [HomeController::class, 'index']
+        '/api' => [HomeController::class, 'index']
     ],
 ];
 
