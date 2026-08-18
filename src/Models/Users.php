@@ -7,17 +7,16 @@ use PDO;
 
 class Users extends Models
 {
-    // protected $table = 'users';
-    protected $primaryKey = 'id';
-    protected $identifier = 'username';
-    protected $password = 'password';
-    public function __construct()
+
+    public function usernameExists(string $username): bool
     {
-        parent::__construct();
+        $stmt = $this->pdo->prepare('SELECT 1 FROM users WHERE username = :username LIMIT 1');
+        $stmt->execute(['username' => $username]);
+
+        return (bool) $stmt->fetchColumn();
     }
 
-
-    public function registerUser($username, $phone, $password, $role)
+    public function registerUser($username, $phone, $password, $role="employee")
     {
         $query = "INSERT INTO users (username, phone, password,role) VALUES (?, ?, ?,?)";
         $stmt = $this->pdo->prepare($query);

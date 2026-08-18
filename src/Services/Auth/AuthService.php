@@ -47,6 +47,9 @@ class AuthService
         if (strlen($password) < 8 || strlen($password) > 128) {
             return [null, "Password must be at least 8 characters and a max of 128 characters and alphanumeric"];
         }
+        if ($this->users->usernameExists($username)) {
+            return [null, 'Username is already taken'];
+        }
         $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
         $user = $this->users->registerUser($username, $phone, $passwordHash, $role);
         if ($user) {
