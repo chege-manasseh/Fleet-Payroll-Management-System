@@ -7,8 +7,6 @@ use PDO;
 
 class RefreshTokens extends Models
 {
-    public function __construct() {}
-
     //CRUD
     public function saveRefreshToken($data)
     {
@@ -41,7 +39,7 @@ class RefreshTokens extends Models
 
     public function getRefreshToken($hashToken)
     {
-        
+
         $query = "SELECT user_id,token_hash,is_revoked,parent_token_hash,root_token_hash,expires_at FROM refresh_tokens WHERE token_hash = ?";
         $stmt = $this->pdo->prepare($query);
         $stmt->execute([$hashToken]);
