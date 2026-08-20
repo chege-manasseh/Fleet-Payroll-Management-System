@@ -2,34 +2,33 @@
 
 namespace App\Authorization;
 
-use App\Authorization\Authorization;
-use App\Models\Permissions;
-use Exception;
+use App\Services\Authorization\RolePermissionService;
 
 class RBACAuthorization implements Authorization
 {
-    private $users;
-    private 
-    public function can(
-        int $userId,
-        string $permission
-    ): bool {
+    private RolePermissionService $rolePermissionService;
+
+    public function __construct(RolePermissionService $rolePermissionService)
+    {
+        $this->rolePermissionService = $rolePermissionService;
+    }
+
+    public function can(int $userId, string $permission): bool
+    {
         $permissions = $this->resolvePermissions($userId);
 
         return isset($permissions[$permission]);
     }
 
-    public function assertCan(
-        int $userId,
-        string $permission
-    ): void {
+    public function assertCan(int $userId, string $permission): void
+    {
         if (!$this->can($userId, $permission)) {
-            throw new Exception("Forbidden ", 401);
+            throw new ForbiddenException();
         }
     }
 
-    public function resolvePermissions($user): array
+    public function resolvePermissions(int $userId): array
     {
-        
+        return $this->rolePermissionService->resolvePermissions($userId);
     }
 }

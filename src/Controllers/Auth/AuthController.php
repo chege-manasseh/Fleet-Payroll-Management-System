@@ -17,6 +17,7 @@ class AuthController extends Controller
 {
     private AuthService $authService;
     private RefreshToken $refreshTokenService;
+    // why have response here if it is already in the parent constructor
     private Response $response;
     private RefreshTokens $refreshTokens;
     private Users $users;
