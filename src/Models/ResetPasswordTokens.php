@@ -6,8 +6,6 @@ namespace App\Models;
 
 class ResetPasswordTokens extends Models
 {
-    public function __construct() {}
-
     public function createResetToken(array $data)
     {
         $fields = [];

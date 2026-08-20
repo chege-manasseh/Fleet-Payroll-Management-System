@@ -10,22 +10,21 @@ use App\Models\RefreshTokens;
 use App\Models\Users;
 use App\Services\Auth\AuthService;
 use App\Services\Auth\RefreshToken;
-use App\Storage\Database;
-use Exception;
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
+use App\Authorization\RBACAuthorization;
 
 // PHASE 1: Controller passes through service results without normalizing HTTP responses for register/login/resetPassword.
 class AuthController extends Controller
 {
     private AuthService $authService;
     private RefreshToken $refreshTokenService;
+    // why have response here if it is already in the parent constructor
     private Response $response;
     private RefreshTokens $refreshTokens;
     private Users $users;
     private CookieHelper $cookieHelper;
+    private RBACAuthorization $auth;
 
-    public function __construct(CookieHelper $cookieHelper, Users $users, AuthService $authService, RefreshToken $refreshTokenService, Response $response, RefreshTokens $refreshTokens)
+    public function __construct(CookieHelper $cookieHelper, Users $users, AuthService $authService, RefreshToken $refreshTokenService, Response $response, RefreshTokens $refreshTokens,RBACAuthorization $auth)
     {
         $this->authService = $authService;
         $this->refreshTokenService = $refreshTokenService;
@@ -33,6 +32,7 @@ class AuthController extends Controller
         $this->refreshTokens = $refreshTokens;
         $this->users = $users;
         $this->cookieHelper = $cookieHelper;
+        $this->auth =$auth;
     }
 
     public function register(Request $request)
