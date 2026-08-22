@@ -21,7 +21,7 @@ return
     [
         'paths' => [
             'migrations' => '%%PHINX_CONFIG_DIR%%/src/Storage/db/migrations/',
-            'seeds' => '%%PHINX_CONFIG_DIR%%/db/seeds'
+            'seeds' => '%%PHINX_CONFIG_DIR%%/src/Storage/db/seeds'
         ],
         'environments' => [
             'default_migration_table' => 'phinxlog',
