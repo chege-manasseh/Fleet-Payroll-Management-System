@@ -71,7 +71,7 @@ class RefreshToken
         }
     }
 
-    public function generateToken($userId, $role = 'user')
+    public function generateToken(int $userId, string $role)
     {
         //symmetric cryptography 
         $accessPayload = [
@@ -82,7 +82,7 @@ class RefreshToken
             'role' => $role,
         ];
         $accessToken = JWT::encode($accessPayload, $_ENV['JWT_SECRET'], $_ENV['JWT_ALGORITHM']);
-      
+
         $refreshToken = bin2hex(random_bytes(40));
         $expiresAt = date('Y-m-d H:i:s', time() + (30 * 24 * 60 * 60)); // 30 
 

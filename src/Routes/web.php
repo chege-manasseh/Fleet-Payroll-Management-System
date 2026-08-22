@@ -68,6 +68,7 @@ if (isset($publicRoutes[$request->getMethod()]) && isset($publicRoutes[$request-
     return [$router, $request, $response, $container];
 }
 
-if ($jwtMiddleware->handle() === true) {
-    return [$router, $request, $response, $container];
+if ($jwtMiddleware->handle() !== true) {
+    exit;
 }
+return [$router, $request, $response, $container];
