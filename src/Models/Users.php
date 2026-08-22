@@ -16,7 +16,7 @@ class Users extends Models
         return (bool) $stmt->fetchColumn();
     }
 
-    public function registerUser($username, $phone, $password, $role="employee")
+    public function registerUser($username, $phone, $password, $role = "employee")
     {
         $query = "INSERT INTO users (username, phone, password,role) VALUES (?, ?, ?,?)";
         $stmt = $this->pdo->prepare($query);
@@ -34,7 +34,7 @@ class Users extends Models
     public function verifyUser($identifier, $password)
     {
 
-        $query = "SELECT * FROM users WHERE username = :identifier OR email = :identifier OR phone = :identifier OR id =:identifier";
+        $query = "SELECT u.id, u.password,u.username, r.name AS role FROM users u INNER JOIN user_has_role uhr ON u.id=uhr.user_id INNER JOIN roles r ON r.id=uhr.role_id WHERE u.username = :identifier OR u.email = :identifier OR u.phone = :identifier OR u.id =:identifier LIMIT 1";
         $stmt = $this->pdo->prepare($query);
         $stmt->execute([
             'identifier' => $identifier
