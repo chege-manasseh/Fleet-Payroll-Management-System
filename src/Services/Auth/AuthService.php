@@ -9,53 +9,98 @@ use App\Models\RefreshTokens;
 use Firebase\JWT\JWT;
 use App\Models\ResetPasswordTokens;
 use App\Storage\Database;
-use Exception;
+use App\Models\UserHasRole;
+use App\Models\Roles;
+use App\Services\Auth\RefreshToken;
+
 
 // PHASE 1: AuthService still builds HTTP responses and sets cookies directly instead of returning data to the controller.
 class AuthService
 {
     private Users $users;
-    private RefreshTokens $refreshTokens;
+    private $pdo;
+    private Database $db;
     public  $message;
     public  $data;
-    private Database $db;
-    private Response $response;
+    private UserHasRole $userRole;
+    private Roles $roles;
+    private RefreshTokens $refreshTokens;
     private ResetPasswordTokens $resetPasswordTokens;
+    private RefreshToken $refreshTokenService;
 
-    public function __construct(Database $db, Users $users, RefreshTokens $refreshTokens, ResetPasswordTokens $resetPasswordTokens, Response $response)
+    public function __construct(RefreshTokens $refreshTokens, RefreshToken $refreshTokenService, Database $db, Roles $roles, Users $users,  ResetPasswordTokens $resetPasswordTokens, UserHasRole $userRole)
     {
         $this->users = $users;
-        $this->refreshTokens = $refreshTokens;
         $this->db = $db;
-        $this->response = $response;
+        $this->pdo = $db->getPDO();
+        $this->roles = $roles;
+        $this->userRole = $userRole;
+        $this->refreshTokens = $refreshTokens;
         $this->resetPasswordTokens = $resetPasswordTokens;
+        $this->refreshTokenService = $refreshTokenService;
     }
 
 
 
-    public function register(string $username, string $phone, string $password, string $role = null)
+    public function registerWithSession(string $username, string $phone, string $password)
     {
-        if (!$username || !$phone || !$password) {
-            return [null, "Please fill in all the details"];
-        }
-        if (strlen($username) < 3 || strlen($username) > 20) {
-            return [null, 'Username must be between 3 and 20 characters'];
-        }
-        if (strlen($phone) != 10) {
-            return [null, 'Phone number less than the expected characters'];
-        }
-        if (strlen($password) < 8 || strlen($password) > 128) {
-            return [null, "Password must be at least 8 characters and a max of 128 characters and alphanumeric"];
-        }
-        if ($this->users->usernameExists($username)) {
-            return [null, 'Username is already taken'];
-        }
-        $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
-        $user = $this->users->registerUser($username, $phone, $passwordHash, $role);
-        if ($user) {
-            return [$user, null];
-        } else {
-            return [null, "Unable to create user"];
+        try {
+            if (!$username || !$phone || !$password) {
+                return [null, "Please fill in all the details"];
+            }
+            if (strlen($username) < 3 || strlen($username) > 20) {
+                return [null, 'Username must be between 3 and 20 characters'];
+            }
+            if (strlen($phone) != 10) {
+                return [null, 'Phone number less than the expected characters'];
+            }
+            if (strlen($password) < 8 || strlen($password) > 128) {
+                return [null, "Password must be at least 8 characters and a max of 128 characters and alphanumeric"];
+            }
+            if ($this->users->usernameExists($username)) {
+                return [null, 'Username is already taken'];
+            }
+            $this->db->beginTransaction();
+            $passwordHash = password_hash($password, PASSWORD_ARGON2ID);
+            $user = $this->users->registerUser($username, $phone, $passwordHash);
+            if (!$user) {
+                $this->db->rollBack();
+                return [null, 'Unable to create user'];
+            }
+
+            $userHasRole = $this->userRole->createUserRole($user['id']);
+            if (!$userHasRole) {
+                $this->db->rollBack();
+                return [null, 'Unable to assign role'];
+            }
+            $role = $this->roles->findById($userHasRole);
+            if (!$role) {
+                $this->db->rollBack();
+                return [null, 'Unable to resolve role'];
+            }
+            $token = $this->refreshTokenService->generateToken($user['id'], $role['name']);
+            $data = [
+                'user_id' => $user['id'],
+                'token_hash' => $token['hashToken'],
+                'expires_at' => $token['expiresAt']
+            ];
+            if ($this->refreshTokens->saveRefreshToken($data)) {
+                $session = [
+                    'accessToken' => $token['accessToken'],
+                    'refreshToken' => $token['refreshToken'],
+                    'username' => $user['username']
+                ];
+                $this->db->commit();
+                return [$session, null];
+            } else {
+                $this->db->rollBack();
+                return [null, 'Token creation failed'];
+            }
+        } catch (\Throwable $e) {
+            if ($this->pdo->inTransaction()) {
+                $this->db->rollBack();
+            }
+            return [null, 'Unable to create user'];
         }
     }
 

@@ -24,7 +24,7 @@ class AuthController extends Controller
     private CookieHelper $cookieHelper;
     private RBACAuthorization $auth;
 
-    public function __construct(CookieHelper $cookieHelper, Users $users, AuthService $authService, RefreshToken $refreshTokenService, Response $response, RefreshTokens $refreshTokens,RBACAuthorization $auth)
+    public function __construct(CookieHelper $cookieHelper, Users $users, AuthService $authService, RefreshToken $refreshTokenService, Response $response, RefreshTokens $refreshTokens, RBACAuthorization $auth)
     {
         $this->authService = $authService;
         $this->refreshTokenService = $refreshTokenService;
@@ -32,38 +32,27 @@ class AuthController extends Controller
         $this->refreshTokens = $refreshTokens;
         $this->users = $users;
         $this->cookieHelper = $cookieHelper;
-        $this->auth =$auth;
+        $this->auth = $auth;
     }
 
     public function register(Request $request)
     {
 
         $data = $request->getData();
-        $password = $data['password'];
-        $username = $data['username'];
-        $phone = $data['phone'];
-        $role = $data['role'];
+        [$session, $error] = $this->authService->registerWithSession(
+            $data['username'],
+            $data['phone'],
+            $data['password']
+        );
         //build a validater for username, phone and password
-
-        [$user, $errors] = $this->authService->register($username, $phone, $password, $role);
-        if (!empty($errors)) {
-            return $this->response->json('Registration failed', ['error' => $errors], 400);
+        if ($error !== null || $session === null) {
+            return $this->response->json('Registration failed', ['error' => $error], 400);
         }
-        if ($user) {
-            $token = $this->refreshTokenService->generateToken($user['id'], $user['role']);
-            $data = [
-                'user_id' => $user['id'],
-                'token_hash' => $token['hashToken'],
-                'expires_at' => $token['expiresAt']
-            ];
-            if ($this->refreshTokens->saveRefreshToken($data)) {
-                $this->cookieHelper->setCookies($token['accessToken'], $token['refreshToken']);
 
-                return $this->response->json("User created successfully", ["username" => $user['username']]);
-            } else {
-                return $this->response->json("Token creation failed please log in ", null, 400);
-            };
-        }
+        $this->cookieHelper->setCookies($session['accessToken'], $session['refreshToken']);
+        return $this->response->json('User created successfully', [
+            'username' => $session['username'],
+        ], 201);
     }
 
     public function login(Request $request)

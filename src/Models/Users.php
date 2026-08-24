@@ -16,11 +16,11 @@ class Users extends Models
         return (bool) $stmt->fetchColumn();
     }
 
-    public function registerUser($username, $phone, $password, $role = "employee")
+    public function registerUser($username, $phone, $password)
     {
-        $query = "INSERT INTO users (username, phone, password,role) VALUES (?, ?, ?,?)";
+        $query = "INSERT INTO users (username, phone, password) VALUES (?, ?, ?)";
         $stmt = $this->pdo->prepare($query);
-        $stmt->execute([$username, $phone, $password, $role]);
+        $stmt->execute([$username, $phone, $password]);
         $user = $this->pdo->lastInsertId();
         $sql = "SELECT * FROM users WHERE id =:id";
         $stmt = $this->pdo->prepare($sql);
