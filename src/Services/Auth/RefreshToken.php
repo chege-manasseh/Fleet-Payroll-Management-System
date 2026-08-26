@@ -48,16 +48,21 @@ class RefreshToken
                 ];
                 $this->refreshTokens->updateRefreshToken($oldToken, $hashToken);
                 $user = $this->users->getUser($tokenRecord['user_id']);
-                $tokens = $this->generateToken($user['id'], $user['role']);
-                $newToken = [
-                    'user_id' => $tokenRecord['user_id'],
-                    'token_hash' => $tokens["hashToken"],
-                    'expires_at' => $tokens['expiresAt'],
-                    'parent_token_hash' => $hashToken,
-                    'root_token_hash' => $tokenRecord['root_token_hash'] ?? $hashToken
-                ];
-                $this->refreshTokens->saveRefreshToken($newToken);
-                return $tokens;
+                if ($user) {
+                    $tokens = $this->generateToken($user['id'], $user['role']);
+                    $newToken = [
+                        'user_id' => $tokenRecord['user_id'],
+                        'token_hash' => $tokens["hashToken"],
+                        'expires_at' => $tokens['expiresAt'],
+                        'parent_token_hash' => $hashToken,
+                        'root_token_hash' => $tokenRecord['root_token_hash'] ?? $hashToken
+                    ];
+                    $this->refreshTokens->saveRefreshToken($newToken);
+                    return $tokens;
+                } else {
+                    $this->refreshTokens->deleteRefreshToken($tokenRecord['user_id']);
+                    return false;
+                }
             } else {
                 //invalidate all refreshtokens for this user
                 if ($tokenRecord['is_revoked'] == true) {
