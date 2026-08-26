@@ -55,7 +55,15 @@ class Users extends Models
     public function getUser($identifier)
     {
         $identifier = trim($identifier);
-        $query = "SELECT * FROM users WHERE email = :indentifier OR phone= :indentifier OR id = :indentifier LIMIT 1";
+        $query = "SELECT u.id, u.username, u.email, u.phone, r.name AS role
+          FROM users u
+          INNER JOIN user_has_role uhr ON u.id = uhr.user_id
+          INNER JOIN roles r ON r.id = uhr.role_id
+          WHERE u.username = :identifier
+             OR u.email = :identifier
+             OR u.phone = :identifier
+             OR u.id = :identifier
+          LIMIT 1";
         $stmt = $this->pdo->prepare($query);
 
         $stmt->execute([
